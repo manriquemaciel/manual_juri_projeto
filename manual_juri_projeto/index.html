@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mapa Operacional do Tribunal do Júri — Projeto Editorial</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="manual_content.js"></script>
+
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #697386;
+      --border: #d8deea;
+      --brand: #174ea6;
+      --brand-2: #2f6fd4;
+      --shadow: 0 12px 32px rgba(30, 48, 79, .14);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      min-height: 70px;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 20px;
+      z-index: 30;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, var(--brand), var(--brand-2));
+      color: white;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(23, 78, 166, .25);
+    }
+
+    .titles { min-width: 0; }
+    .titles h1 {
+      margin: 0;
+      font-size: clamp(16px, 1.6vw, 23px);
+      line-height: 1.15;
+    }
+    .titles p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .stage-pill {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    .stage-pill:hover {
+      border-color: var(--brand-2);
+      color: var(--brand);
+      transform: translateY(-1px);
+    }
+
+    .workspace {
+      min-height: 0;
+      position: relative;
+    }
+
+    #diagramViewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(23,78,166,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23,78,166,.035) 1px, transparent 1px),
+        #f7f9fc;
+      background-size: 28px 28px;
+      cursor: grab;
+    }
+    #diagramViewport:active { cursor: grabbing; }
+
+    #diagram {
+      width: 100%;
+      height: 100%;
+    }
+
+    #diagram svg {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      display: block;
+      user-select: none;
+    }
+
+    #diagram g.node {
+      cursor: pointer;
+    }
+
+    #diagram g.cluster {
+      cursor: default;
+    }
+
+    #diagram g.node:hover > rect,
+    #diagram g.node:hover > polygon,
+    #diagram g.node:hover > path {
+      filter: drop-shadow(0 4px 7px rgba(23, 78, 166, .28));
+    }
+
+    .controls {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      z-index: 20;
+      background: rgba(255,255,255,.96);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 14px;
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .controls button {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 10px;
+      background: #f4f7fb;
+      color: #26354f;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+    .controls button:hover {
+      background: #e8effa;
+      color: var(--brand);
+    }
+
+    .zoom-indicator {
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      padding: 3px 0;
+    }
+
+    .legend {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      z-index: 20;
+      width: 220px;
+      background: rgba(255,255,255,.95);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .legend strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,.18);
+      flex: 0 0 auto;
+    }
+
+    .minimap {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      z-index: 20;
+      width: min(320px, 31vw);
+      height: 210px;
+      background: rgba(255,255,255,.97);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .minimap-title {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      padding: 0 11px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 800;
+      color: #44516a;
+      background: #fbfcfe;
+    }
+
+    #miniHost {
+      height: calc(100% - 34px);
+      position: relative;
+      background: #fff;
+    }
+
+    #miniHost svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #miniViewportRect {
+      fill: rgba(23, 78, 166, .12);
+      stroke: #174ea6;
+      stroke-width: 9;
+      vector-effect: non-scaling-stroke;
+      pointer-events: none;
+    }
+
+    .manual-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(14, 25, 43, .42);
+      z-index: 99;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+    }
+
+    .manual-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .manual-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: min(560px, 92vw);
+      background: #fff;
+      z-index: 100;
+      box-shadow: -18px 0 50px rgba(11, 26, 51, .24);
+      transform: translateX(105%);
+      transition: transform .24s ease;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .manual-panel.open { transform: translateX(0); }
+
+    .manual-head {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: linear-gradient(180deg, #ffffff, #f8faff);
+    }
+
+    .manual-head-text { flex: 1; }
+
+    .manual-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--brand);
+      margin-bottom: 6px;
+    }
+
+    .manual-head h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .close {
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 11px;
+      background: #eef3fa;
+      font-size: 22px;
+      cursor: pointer;
+      color: #34445e;
+    }
+
+    .manual-body {
+      overflow: auto;
+      padding: 24px;
+      line-height: 1.65;
+    }
+
+    .placeholder {
+      border: 1px dashed #9fb5d3;
+      background: #f7faff;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+
+    .placeholder strong {
+      color: var(--brand);
+    }
+
+    .file-link-box {
+      border: 1px solid #cdd9ea;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 0 0 20px;
+    }
+
+    .file-link-box .file-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    .file-link-box code {
+      display: block;
+      overflow-wrap: anywhere;
+      background: #f4f7fb;
+      border: 1px solid #e0e7f0;
+      border-radius: 8px;
+      padding: 9px 10px;
+      margin-bottom: 10px;
+      font-size: 11px;
+    }
+
+    .file-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      text-decoration: none;
+      background: var(--brand);
+      color: white;
+      border-radius: 9px;
+      padding: 9px 12px;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .file-link:hover {
+      background: var(--brand-2);
+    }
+
+    .manual-body h3 {
+      margin: 24px 0 8px;
+      font-size: 15px;
+    }
+
+    .step-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 18px;
+    }
+
+    .step-meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #eef3fa;
+      border: 1px solid #d7e1ef;
+      color: #43516a;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .step-name-box {
+      border-left: 4px solid var(--brand);
+      background: #f8faff;
+      border-radius: 10px;
+      padding: 13px 15px;
+      margin: 0 0 18px;
+      font-weight: 700;
+      color: #26354f;
+    }
+
+    .manual-body ul {
+      margin-top: 8px;
+      padding-left: 20px;
+    }
+
+    .manual-body li { margin: 7px 0; }
+
+    .status {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 19;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.92);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(30,48,79,.08);
+    }
+
+    .loading {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    @media (max-width: 900px) {
+      .header-actions { display: none; }
+      .legend { display: none; }
+      .minimap {
+        width: 190px;
+        height: 135px;
+      }
+      .minimap-title { height: 28px; }
+      #miniHost { height: calc(100% - 28px); }
+      .status { display: none; }
+    }
+
+    .rendered-manual { line-height: 1.62; }
+    .rendered-manual > h1:first-child { display: none; }
+    .rendered-manual h2 { margin-top: 24px; font-size: 17px; }
+    .rendered-manual h3 { margin-top: 20px; font-size: 15px; }
+    .rendered-manual p { margin: 10px 0; }
+    .rendered-manual blockquote {
+      margin: 14px 0; padding: 10px 12px; border-left: 4px solid #d59d16;
+      background: #fff8df; border-radius: 0 8px 8px 0;
+    }
+    .rendered-manual table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 12px; }
+    .rendered-manual th, .rendered-manual td { border: 1px solid var(--border); padding: 7px 8px; text-align: left; vertical-align: top; }
+    .rendered-manual th { background: #f4f7fb; }
+    .rendered-manual code { background: #f1f4f8; padding: 2px 5px; border-radius: 5px; font-size: .92em; }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand-mark">J</div>
+      <div class="titles">
+        <h1>Mapa Operacional do Tribunal do Júri</h1>
+        <p>Fluxo processual e atos de Secretaria • menu superior = manual da etapa • caixas do fluxo = manual do passo</p>
+      </div>
+      <div class="header-actions" aria-label="Atalhos para os manuais">
+        <button class="stage-pill" data-open-stage="0">Contexto pré-processual</button>
+        <button class="stage-pill" data-open-stage="1">Etapa 1</button>
+        <button class="stage-pill" data-open-stage="2">Etapa 2</button>
+        <button class="stage-pill" data-open-stage="3">Etapa 3</button>
+        <button class="stage-pill" data-open-stage="4">Etapa 4</button>
+        <button class="stage-pill" data-open-stage="5">Etapa 5</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section id="diagramViewport">
+        <div id="diagram">
+          <div class="loading">Renderizando o mapa do Júri…</div>
+        </div>
+      </section>
+
+      <div class="controls" aria-label="Controles de zoom">
+        <button id="zoomIn" title="Aumentar zoom" aria-label="Aumentar zoom">+</button>
+        <button id="zoomOut" title="Diminuir zoom" aria-label="Diminuir zoom">−</button>
+        <button id="fit" title="Ajustar diagrama à tela" aria-label="Ajustar à tela">⌗</button>
+        <button id="reset" title="Voltar ao enquadramento inicial" aria-label="Redefinir visualização">↺</button>
+        <div class="zoom-indicator" id="zoomPct">100%</div>
+      </div>
+
+      <div class="status">Arraste para navegar • zoom até 3000% • clique em uma caixa para abrir o manual do passo</div>
+
+      <aside class="legend">
+        <strong>Legenda</strong>
+        <div class="legend-row"><span class="swatch" style="background:#FFF3CD"></span>Atos de Secretaria</div>
+        <div class="legend-row"><span class="swatch" style="background:#DCEEFF"></span>Atos judiciais</div>
+        <div class="legend-row"><span class="swatch" style="background:#F3E8FF"></span>Recursos / 2º grau</div>
+        <div class="legend-row"><span class="swatch" style="background:#FFE4E6"></span>Pontos decisórios</div>
+        <div class="legend-row"><span class="swatch" style="background:#DCFCE7"></span>Baixa / arquivamento</div>
+      </aside>
+
+      <aside class="minimap" aria-label="Minimapa do diagrama">
+        <div class="minimap-title">MINIMAPA • área visível destacada</div>
+        <div id="miniHost"></div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="manual-backdrop" id="backdrop"></div>
+
+  <aside class="manual-panel" id="manualPanel" aria-modal="true" role="dialog">
+    <div class="manual-head">
+      <div class="manual-head-text">
+        <div class="manual-kicker" id="manualKicker">Manual operacional</div>
+        <h2 id="manualTitle">Etapa</h2>
+      </div>
+      <button class="close" id="closeManual" aria-label="Fechar manual">×</button>
+    </div>
+    <div class="manual-body" id="manualBody"></div>
+  </aside>
+
+  <script>
+    const stageManuals = {
+      0: {
+        title: "Contexto pré-processual — Inquérito Policial",
+        summary: "Fluxo de contexto anterior às Etapas 1 a 5 do recorte do Mapa Nacional do Júri."
+      },
+      1: {
+        title: "Etapa 1 — Ação Penal e Fase Sumária",
+        summary: "Do recebimento da denúncia à decisão final da primeira fase: pronúncia, impronúncia, absolvição sumária ou desclassificação."
+      },
+      2: {
+        title: "Etapa 2 — Recursos da Fase Sumária",
+        summary: "Da interposição do recurso contra a decisão da fase sumária até o julgamento e a baixa ao primeiro grau."
+      },
+      3: {
+        title: "Etapa 3 — Preparação e Realização da Sessão do Júri",
+        summary: "Da pronúncia preclusa, ou retorno do recurso, à preparação e realização da sessão plenária, com foco na prevenção de adiamentos."
+      },
+      4: {
+        title: "Etapa 4 — Recurso da Sentença Plenária",
+        summary: "Da interposição da apelação contra a sentença plenária até o julgamento do recurso e eventual baixa."
+      },
+      5: {
+        title: "Etapa 5 — Providências Finais, Execução e Arquivamento",
+        summary: "Conferência individual do resultado, trânsito/preclusão, BNMP 3.0, SEEU, SNGB, pendências residuais, baixa e arquivamento."
+      }
+    };
+
+
+    const stageFiles = {
+  "0": "manuais/etapa_0_inquerito_policial/MANUAL_DA_ETAPA.md",
+  "1": "manuais/etapa_1_acao_penal_fase_sumaria/MANUAL_DA_ETAPA.md",
+  "2": "manuais/etapa_2_recursos_fase_sumaria/MANUAL_DA_ETAPA.md",
+  "3": "manuais/etapa_3_preparacao_sessao_juri/MANUAL_DA_ETAPA.md",
+  "4": "manuais/etapa_4_recurso_sentenca_plenaria/MANUAL_DA_ETAPA.md",
+  "5": "manuais/etapa_5_providencias_finais_execucao_arquivamento/MANUAL_DA_ETAPA.md"
+};
+
+    const stepFiles = {
+  "IP1": "manuais/etapa_0_inquerito_policial/passos/IP1_noticia_crime_bo_apf_crime_doloso_contra_a_vida.md",
+  "IP2": "manuais/etapa_0_inquerito_policial/passos/IP2_instauracao_do_inquerito_policial.md",
+  "IP3": "manuais/etapa_0_inquerito_policial/passos/IP3_diligencias_investigativas_oitivas_pericias_laudos_apreensoes_reconhec.md",
+  "IP4": "manuais/etapa_0_inquerito_policial/passos/IP4_ha_medida_cautelar_submetida_ao_judiciario.md",
+  "IP5": "manuais/etapa_0_inquerito_policial/passos/IP5_decisao_sobre_cautelar_prisao_busca_e_apreensao_quebra_de_sigilo_outra.md",
+  "IP6": "manuais/etapa_0_inquerito_policial/passos/IP6_prosseguimento_das_investigacoes.md",
+  "IP7": "manuais/etapa_0_inquerito_policial/passos/IP7_relatorio_final_da_autoridade_policial.md",
+  "IPS1": "manuais/etapa_0_inquerito_policial/passos/IPS1_secretaria_receber_e_cadastrar_o_procedimento_conferir_classe_partes_e.md",
+  "IPS2": "manuais/etapa_0_inquerito_policial/passos/IPS2_secretaria_registrar_decisao_expedir_mandado_oficio_alvara_cadastrar_o.md",
+  "IPS3": "manuais/etapa_0_inquerito_policial/passos/IPS3_secretaria_distribuicao_receber_inquerito_concluido_atualizar_cadastro.md",
+  "IPS4": "manuais/etapa_0_inquerito_policial/passos/IPS4_secretaria_cumprir_diligencias_remessa_a_policia.md",
+  "IPS5": "manuais/etapa_0_inquerito_policial/passos/IPS5_providencias_relativas_ao_arquivamento_conforme_decisao_procedimento_a.md",
+  "MP0": "manuais/etapa_0_inquerito_policial/passos/MP0_manifestacao_do_ministerio_publico.md",
+  "MP1": "manuais/etapa_0_inquerito_policial/passos/MP1_requisicao_de_diligencias_complementares.md",
+  "MP2": "manuais/etapa_0_inquerito_policial/passos/MP2_promocao_de_arquivamento.md",
+  "MP3": "manuais/etapa_0_inquerito_policial/passos/MP3_oferecimento_da_denuncia.md",
+  "E1AS": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1AS_absolvicao_sumaria.md",
+  "E1DREC": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1DREC_houve_recurso_contra_a_decisao_da_fase_sumaria.md",
+  "E1DS": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1DS_desclassificacao.md",
+  "E1IM": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1IM_impronuncia.md",
+  "E1P01": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P01_recebimento_da_denuncia_e_comandos_antecipados.md",
+  "E1P02": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P02_expedicao_e_controle_da_citacao.md",
+  "E1P03": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P03_citacao_aperfeicoada.md",
+  "E1P04": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P04_dilig_ncias_apos_citacao_negativa.md",
+  "E1P05": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P05_edital_e_art_366_do_cpp_quando_cabiveis.md",
+  "E1P06": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P06_controle_da_resposta_acusacao.md",
+  "E1P07": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P07_aus_ncia_de_resposta_regularizacao_da_defesa.md",
+  "E1P08": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P08_resposta_com_preliminares_ou_questao_de_contraditorio.md",
+  "E1P09": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P09_preparacao_pre_instrucao.md",
+  "E1P10": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P10_pericias_intimac_es_frustradas_e_pedidos_incidentais.md",
+  "E1P11": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P11_preparacao_da_audi_ncia_de_instrucao.md",
+  "E1P12": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P12_audi_ncia_de_instrucao_e_ocorr_ncias.md",
+  "E1P13": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P13_encerramento_da_instrucao_e_alegac_es_finais.md",
+  "E1P14": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1P14_decisao_final_da_fase_sumaria.md",
+  "E1PR": "manuais/etapa_1_acao_penal_fase_sumaria/passos/E1PR_pronuncia.md",
+  "E2DRES": "manuais/etapa_2_recursos_fase_sumaria/passos/E2DRES_resultado_do_recurso_da_fase_sumaria.md",
+  "E2P01": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P01_passo_2_1_identificar_a_decisao_e_o_recurso_cabivel.md",
+  "E2P02": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P02_passo_2_2_conferir_as_intimac_es_da_decisao.md",
+  "E2P03": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P03_passo_2_3_controlar_o_prazo_de_interposicao.md",
+  "E2P04": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P04_passo_2_4_receber_a_interposicao_e_identificar_o_fluxo.md",
+  "E2P05": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P05_passo_2_5_rese_proprios_autos_ou_instrumento.md",
+  "E2P06": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P06_passo_2_6_rese_raz_es_e_contrarraz_es.md",
+  "E2P07": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P07_passo_2_7_rese_juizo_de_retratacao.md",
+  "E2P08": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P08_passo_2_8_rese_nova_acao_no_2_grau.md",
+  "E2P09": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P09_passo_2_9_apelacao_raz_es_e_art_600_4.md",
+  "E2P10": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P10_passo_2_10_apelacao_remeter_pelo_projudi.md",
+  "E2P11": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P11_passo_2_11_acompanhar_o_julgamento_no_tribunal.md",
+  "E2P12": "manuais/etapa_2_recursos_fase_sumaria/passos/E2P12_passo_2_12_receber_o_recurso_apos_o_julgamento.md",
+  "E3D01": "manuais/etapa_3_preparacao_sessao_juri/passos/E3D01_sessao_pode_ser_realizada.md",
+  "E3DREC": "manuais/etapa_3_preparacao_sessao_juri/passos/E3DREC_foi_interposto_recurso_contra_a_sentenca_plenaria.md",
+  "E3NR": "manuais/etapa_3_preparacao_sessao_juri/passos/E3NR_sessao_nao_realizada_ou_adiada.md",
+  "E3P01": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P01_pronuncia_definitiva_e_controle_por_acusado.md",
+  "E3P02": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P02_art_422_rol_documentos_e_dilig_ncias.md",
+  "E3P03": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P03_decisao_preparatoria_do_art_423.md",
+  "E3P04": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P04_dilig_ncias_e_intimac_es_para_o_plenario.md",
+  "E3P05": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P05_checklist_ate_15_dias_antes_da_sessao.md",
+  "E3P06": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P06_defesa_tecnica_renuncia_ou_revogacao_proxima_da_sessao.md",
+  "E3P07": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P07_sorteio_convocacao_e_confer_ncia_de_jurados.md",
+  "E3P08": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P08_acusado_preso_escolta_e_apresentacao.md",
+  "E3P09": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P09_midias_equipamentos_e_quesitos_antes_do_plenario.md",
+  "E3P10": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P10_sessao_plenaria_formacao_do_conselho_e_instrucao.md",
+  "E3P11": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P11_debates_apartes_e_quesitacao.md",
+  "E3P12": "manuais/etapa_3_preparacao_sessao_juri/passos/E3P12_veredicto_sentenca_ata_e_pos_plenario.md",
+  "E4DRES": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4DRES_resultado_da_apelacao_plenaria.md",
+  "E4P01": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P01_passo_4_1_conferir_publicacao_e_intimacao_em_plenario.md",
+  "E4P02": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P02_passo_4_2_verificar_intimac_es_posteriores_necessarias.md",
+  "E4P03": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P03_passo_4_3_controlar_o_prazo_da_apelacao.md",
+  "E4P04": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P04_passo_4_4_receber_a_apelacao_e_conferir_conteudo.md",
+  "E4P05": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P05_passo_4_5_abrir_prazo_para_raz_es_e_contrarraz_es.md",
+  "E4P06": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P06_passo_4_6_pedido_para_arrazoar_diretamente_no_tribunal.md",
+  "E4P07": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P07_passo_4_7_conferir_se_a_apelacao_esta_pronta_para_remessa.md",
+  "E4P08": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P08_passo_4_8_remeter_a_apelacao_pelo_projudi.md",
+  "E4P09": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P09_passo_4_9_conferir_os_efeitos_da_remessa.md",
+  "E4P10": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P10_passo_4_10_acompanhar_a_apelacao_no_segundo_grau.md",
+  "E4P11": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P11_passo_4_11_receber_a_baixa_e_conferir_o_resultado.md",
+  "E4P12": "manuais/etapa_4_recurso_sentenca_plenaria/passos/E4P12_passo_4_12_encerrar_a_etapa_recursal.md",
+  "E5A01": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5A01_absolvicao_ordens_imediatas_e_provid_ncias_finais.md",
+  "E5ARQ": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5ARQ_baixa_definitiva_e_arquivamento.md",
+  "E5C01": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5C01_condenacao_conferir_pena_regime_e_situacao_prisional.md",
+  "E5C02": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5C02_bnmp_3_0_guias_prisao_e_soltura.md",
+  "E5C03": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5C03_seeu_formar_complementar_ou_regularizar_a_execucao.md",
+  "E5C04": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5C04_registrar_no_projudi_os_atos_externos.md",
+  "E5D01": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5D01_identificar_o_resultado_final.md",
+  "E5D02X": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5D02X_execucao_penal_ja_existe.md",
+  "E5D02": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5D02_desclassificacao_remessa_ao_juizo_competente.md",
+  "E5I01": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5I01_impronuncia_cumprir_determinac_es_e_preparar_encerramento.md",
+  "E5P01": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5P01_conferir_situacao_processual_por_acusado.md",
+  "E5P02": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5P02_certificar_tr_nsito_em_julgado_ou_preclusao.md",
+  "E5P03": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5P03_resolver_bens_sngb_fianca_custas_e_mandados.md",
+  "E5P04": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5P04_certificar_cumprimento_integral.md",
+  "E5PEND": "manuais/etapa_5_providencias_finais_execucao_arquivamento/passos/E5PEND_existem_pend_ncias_residuais.md"
+};
+
+    function fileHref(path) {
+      return encodeURI(path);
+    }
+
+    const mermaidDefinition = String.raw`
+flowchart TD
+
+INICIO([INÍCIO])
+
+subgraph E0["CONTEXTO PRÉ-PROCESSUAL — INQUÉRITO POLICIAL (FORA DAS ETAPAS CNJ 1–5)"]
+direction TB
+IP1["Notícia-crime / BO / APF<br/>Crime doloso contra a vida"]
+IP2["Instauração do Inquérito Policial"]
+IP3["Diligências investigativas<br/>• oitivas<br/>• perícias<br/>• laudos<br/>• apreensões<br/>• reconhecimentos<br/>• outras diligências"]
+IP4{"Há medida cautelar<br/>submetida ao Judiciário?"}
+IPS1["SECRETARIA<br/>Receber e cadastrar o procedimento<br/>Conferir classe, partes e sigilo<br/>Certificar documentos recebidos<br/>Fazer conclusão ao Juízo"]
+IP5["Decisão sobre cautelar<br/>• prisão<br/>• busca e apreensão<br/>• quebra de sigilo<br/>• outras medidas"]
+IPS2["SECRETARIA<br/>Registrar decisão<br/>Expedir mandado / ofício / alvará<br/>Cadastrar ordem nos sistemas pertinentes<br/>Certificar cumprimento ou pendência"]
+IP6["Prosseguimento das investigações"]
+IP7["Relatório final da Autoridade Policial"]
+IPS3["SECRETARIA / DISTRIBUIÇÃO<br/>Receber Inquérito concluído<br/>Atualizar cadastro<br/>Remeter ao Ministério Público"]
+MP0{"Manifestação do Ministério Público"}
+MP1["Requisição de diligências complementares"]
+MP2["Promoção de arquivamento"]
+MP3["OFERECIMENTO DA DENÚNCIA"]
+IPS4["SECRETARIA<br/>Cumprir diligências/remessa à Polícia"]
+IPS5["Providências relativas ao arquivamento<br/>conforme decisão/procedimento aplicável"]
+end
+
+INICIO --> IP1
+IP1 --> IP2
+IP2 --> IP3
+IP3 --> IP4
+IP4 -- "Sim" --> IPS1
+IPS1 --> IP5
+IP5 --> IPS2
+IPS2 --> IP6
+IP4 -- "Não" --> IP6
+IP6 --> IP7
+IP7 --> IPS3
+IPS3 --> MP0
+MP0 -- "Diligências" --> MP1
+MP1 --> IPS4
+IPS4 --> IP3
+MP0 -- "Arquivamento" --> MP2
+MP2 --> IPS5
+MP0 -- "Denúncia" --> MP3
+
+
+subgraph E1["ETAPA 1 — AÇÃO PENAL / FASE SUMÁRIA"]
+direction TB
+E1P01["1. Recebimento da denúncia<br/>com comandos antecipados"]
+E1P02["2. SECRETARIA — CITAÇÃO<br/>Expedir e controlar diligências"]
+E1P03{"3. Citação<br/>aperfeiçoada?"}
+E1P04["4. Citação negativa<br/>Vista ao MP para endereços<br/>e renovação das diligências"]
+E1P05["5. Edital / art. 366 CPP<br/>quando cabíveis e determinados"]
+E1P06["6. RESPOSTA À ACUSAÇÃO<br/>Controlar prazo de 10 dias"]
+E1P07["7. Sem resposta/sem advogado<br/>Regularizar defesa conforme comando"]
+E1P08{"8. Há preliminares<br/>ou matéria de contraditório?"}
+E1P09["9. PRÉ-INSTRUÇÃO<br/>Laudos + endereços + diligências"]
+E1P10["10. Perícias e incidentes<br/>Intimações frustradas / pedidos"]
+E1P11["11. Preparação da AIJ<br/>Expedientes, escolta e conferências"]
+E1P12["12. AUDIÊNCIA DE INSTRUÇÃO<br/>Registrar e cumprir determinações"]
+E1P13["13. Encerramento da instrução<br/>Alegações finais + controle de prazos"]
+E1P14{"14. DECISÃO FINAL<br/>DA FASE SUMÁRIA"}
+E1PR["PRONÚNCIA"]
+E1IM["IMPRONÚNCIA"]
+E1AS["ABSOLVIÇÃO SUMÁRIA"]
+E1DS["DESCLASSIFICAÇÃO"]
+E1DREC{"Houve recurso?"}
+end
+
+MP3 --> E1P01
+E1P01 --> E1P02
+E1P02 --> E1P03
+E1P03 -- "Não" --> E1P04
+E1P04 --> E1P02
+E1P03 -- "Após edital/hipótese cabível" --> E1P05
+E1P05 --> E1P06
+E1P03 -- "Sim" --> E1P06
+E1P06 --> E1P07
+E1P07 --> E1P08
+E1P08 -- "Sim: vista ao MP" --> E1P09
+E1P08 -- "Não: conclusão" --> E1P09
+E1P09 --> E1P10
+E1P10 --> E1P11
+E1P11 --> E1P12
+E1P12 --> E1P13
+E1P13 --> E1P14
+E1P14 -- "Pronúncia" --> E1PR
+E1P14 -- "Impronúncia" --> E1IM
+E1P14 -- "Absolvição" --> E1AS
+E1P14 -- "Desclassificação" --> E1DS
+E1PR --> E1DREC
+E1IM --> E1DREC
+E1AS --> E1DREC
+E1DS --> E1DREC
+
+subgraph E2["ETAPA 2 — RECURSO CONTRA A DECISÃO DA FASE SUMÁRIA"]
+direction TB
+E2P01["2.1 Identificar decisão<br/>e recurso cabível"]
+E2P02["2.2 Conferir intimações<br/>que originaram o prazo"]
+E2P03["2.3 Controlar prazo<br/>de interposição — 5 dias"]
+E2P04{"2.4 Receber recurso<br/>e identificar fluxo"}
+E2P05["2.5 RESE<br/>Próprios autos x instrumento"]
+E2P06["2.6 RESE<br/>Razões 2d + contrarrazões 2d"]
+E2P07["2.7 RESE<br/>Juízo de retratação"]
+E2P08["2.8 PROJUDI — RESE<br/>Nova Ação no 2º Grau"]
+E2P09["2.9 APELAÇÃO<br/>Razões 8d + contrarrazões 8d<br/>ou art. 600 §4º"]
+E2P10["2.10 PROJUDI — APELAÇÃO<br/>Recurso ao Tribunal de Justiça"]
+E2P11["2.11 Acompanhar julgamento<br/>no Tribunal"]
+E2P12["2.12 Receber baixa<br/>e conferir resultado"]
+E2DRES{"Resultado do recurso<br/>da fase sumária"}
+end
+
+E1DREC -- "Sim" --> E2P01
+E2P01 --> E2P02 --> E2P03 --> E2P04
+E2P04 -- "RESE" --> E2P05 --> E2P06 --> E2P07 --> E2P08 --> E2P11
+E2P04 -- "Apelação" --> E2P09 --> E2P10 --> E2P11
+E2P11 --> E2P12 --> E2DRES
+
+subgraph E3["ETAPA 3 — PRONÚNCIA DEFINITIVA, PREPARAÇÃO E SESSÃO DO JÚRI"]
+direction TB
+E3P01["3.1 Pronúncia definitiva<br/>Controle por acusado"]
+E3P02["3.2 Art. 422 CPP<br/>Rol + documentos + diligências"]
+E3P03["3.3 Decisão preparatória<br/>Art. 423 + relatório neutro"]
+E3P04["3.4 Diligências e intimações<br/>Conferir imprescindibilidade"]
+E3P05["3.5 CHECKLIST D-15<br/>Correção antecipada de falhas"]
+E3P06["3.6 Defesa técnica<br/>Renúncia / revogação"]
+E3P07["3.7 Jurados<br/>Sorteio, convocação e conferência"]
+E3P08["3.8 Réu preso<br/>Escolta e apresentação"]
+E3P09["3.9 Mídias, equipamentos<br/>e quesitos antes do plenário"]
+E3D01{"Sessão pode<br/>ser realizada?"}
+E3NR["Redesignar sessão<br/>e renovar providências necessárias"]
+E3P10["3.10 SESSÃO PLENÁRIA<br/>Conselho + instrução"]
+E3P11["3.11 Debates, apartes<br/>e quesitação"]
+E3P12["3.12 Veredicto + sentença<br/>Ata e pós-plenário"]
+E3DREC{"Recurso contra<br/>a sentença plenária?"}
+end
+
+E1DREC -- "Não + pronúncia preclusa" --> E3P01
+E2DRES -- "Pronúncia mantida / acusado pronunciado" --> E3P01
+E2DRES -- "Anulação / renovar fase sumária" --> E1P09
+E3P01 --> E3P02 --> E3P03 --> E3P04 --> E3P05 --> E3P06 --> E3P07 --> E3P08 --> E3P09 --> E3D01
+E3D01 -- "Não" --> E3NR --> E3P05
+E3D01 -- "Sim" --> E3P10 --> E3P11 --> E3P12 --> E3DREC
+
+subgraph E4["ETAPA 4 — RECURSO CONTRA A SENTENÇA PLENÁRIA"]
+direction TB
+E4P01["4.1 Conferir publicação<br/>e intimação em plenário"]
+E4P02["4.2 Verificar intimações<br/>posteriores necessárias"]
+E4P03["4.3 Controlar apelação<br/>Prazo de 5 dias"]
+E4P04["4.4 Receber apelação<br/>e conferir conteúdo"]
+E4P05["4.5 Razões 8d<br/>+ contrarrazões 8d"]
+E4P06{"4.6 Razões diretamente<br/>no Tribunal — art. 600 §4º?"}
+E4P07["4.7 Checklist antes<br/>da remessa"]
+E4P08["4.8 PROJUDI<br/>Recurso ao Tribunal de Justiça"]
+E4P09["4.9 Conferir efeitos<br/>da remessa"]
+E4P10["4.10 Acompanhar apelação<br/>no segundo grau"]
+E4P11["4.11 Receber baixa<br/>e conferir resultado"]
+E4P12["4.12 Encerrar etapa recursal<br/>e definir próximo fluxo"]
+E4DRES{"Resultado da<br/>apelação plenária"}
+end
+
+E3DREC -- "Sim" --> E4P01
+E4P01 --> E4P02 --> E4P03 --> E4P04 --> E4P05 --> E4P06
+E4P06 -- "Sim: não abrir razões no 1º grau" --> E4P07
+E4P06 -- "Não" --> E4P07
+E4P07 --> E4P08 --> E4P09 --> E4P10 --> E4P11 --> E4P12 --> E4DRES
+E4DRES -- "Novo Júri" --> E3P02
+E4DRES -- "Nulidade anterior" --> E1P09
+
+subgraph E5["ETAPA 5 — PROVIDÊNCIAS FINAIS, EXECUÇÃO E ARQUIVAMENTO"]
+direction TB
+E5P01["5.1 Conferir situação processual<br/>POR ACUSADO"]
+E5P02["5.2 Certificar trânsito<br/>ou preclusão"]
+E5D01{"5.3 Resultado final"}
+E5I01["IMPRONÚNCIA<br/>Cumprir determinações finais"]
+E5A01["ABSOLVIÇÃO<br/>Conferir ordens imediatas"]
+E5D02["DESCLASSIFICAÇÃO<br/>Remeter ao Juízo competente"]
+E5C01["CONDENAÇÃO<br/>Pena + regime + detração<br/>prisão + BNMP + mandados"]
+E5D02X{"Execução penal<br/>já existe?"}
+E5C02["BNMP 3.0<br/>Guias / prisão / soltura"]
+E5C03["SEEU<br/>Formar / complementar / regularizar<br/>e confirmar distribuição"]
+E5C04["Registrar no PROJUDI<br/>atos praticados em outros sistemas"]
+E5PEND{"Há pendências<br/>residuais?"}
+E5P03["Resolver bens / SNGB / fiança<br/>custas / mandados / comunicações"]
+E5P04["Certificar cumprimento<br/>integral"]
+E5ARQ["BAIXA DEFINITIVA<br/>E ARQUIVAMENTO"]
+FIM([PROCESSO ENCERRADO<br/>NA UNIDADE DO JÚRI])
+end
+
+E1DREC -- "Não + resultado sem Júri" --> E5P01
+E2DRES -- "Impronúncia / absolvição / desclassificação" --> E5P01
+E3DREC -- "Não" --> E5P01
+E4DRES -- "Mantém / retifica + resultado definitivo" --> E5P01
+E5P01 --> E5P02 --> E5D01
+E5D01 -- "Impronúncia" --> E5I01 --> E5PEND
+E5D01 -- "Absolvição" --> E5A01 --> E5PEND
+E5D01 -- "Desclassificação" --> E5D02 --> E5PEND
+E5D01 -- "Condenação" --> E5C01 --> E5D02X
+E5D02X -- "Sim" --> E5C03
+E5D02X -- "Não" --> E5C02 --> E5C03
+E5C03 --> E5C04 --> E5PEND
+E5PEND -- "Sim" --> E5P03 --> E5P04
+E5PEND -- "Não" --> E5P04
+E5P04 --> E5ARQ --> FIM
+
+classDef secretaria fill:#FFF3CD,stroke:#B8860B,stroke-width:1.5px,color:#222;
+classDef judicial fill:#DCEEFF,stroke:#2563EB,stroke-width:1.5px,color:#111;
+classDef recurso fill:#F3E8FF,stroke:#7E22CE,stroke-width:1.5px,color:#111;
+classDef decisao fill:#FFE4E6,stroke:#BE123C,stroke-width:2px,color:#111;
+classDef final fill:#DCFCE7,stroke:#15803D,stroke-width:2px,color:#111;
+classDef policial fill:#E5E7EB,stroke:#4B5563,stroke-width:1.5px,color:#111;
+
+class IP1,IP2,IP3,IP6,IP7 policial;
+class IPS1,IPS2,IPS3,IPS4,IPS5 secretaria;
+class E1P02,E1P04,E1P06,E1P07,E1P09,E1P10,E1P11,E1P12,E1P13 secretaria;
+class E1P01,E1P05,E1P14 judicial;
+class E1P03,E1P08,E1DREC,E2P04,E2DRES,E3D01,E3DREC,E4P06,E4DRES,E5D01,E5D02X,E5PEND decisao;
+class E1PR,E1IM,E1AS,E1DS judicial;
+class E2P01,E2P02,E2P03,E2P05,E2P06,E2P07,E2P08,E2P09,E2P10,E2P11,E2P12 recurso;
+class E3P01,E3P02,E3P03,E3P04,E3P05,E3P06,E3P07,E3P08,E3P09,E3P10,E3P11,E3P12 secretaria;
+class E3NR judicial;
+class E4P01,E4P02,E4P03,E4P04,E4P05,E4P07,E4P08,E4P09,E4P10,E4P11,E4P12 recurso;
+class E5P01,E5P02,E5I01,E5A01,E5D02,E5C01,E5C02,E5C03,E5C04,E5P03,E5P04 secretaria;
+class E5ARQ,FIM final;
+`;
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme: 'base',
+      flowchart: {
+        htmlLabels: true,
+        curve: 'basis',
+        useMaxWidth: false,
+        nodeSpacing: 24,
+        rankSpacing: 34
+      },
+      themeVariables: {
+        fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+        fontSize: '13px',
+        primaryTextColor: '#172033',
+        lineColor: '#7b879b',
+        clusterBkg: '#ffffff',
+        clusterBorder: '#aeb9ca'
+      }
+    });
+
+    let panZoom = null;
+    let mainSvg = null;
+    let miniSvg = null;
+    let miniRect = null;
+    let rafPending = false;
+
+    function stageFromId(id = "") {
+      if (/^E0|IP|IPS|MP/.test(id)) return 0;
+      for (let i = 1; i <= 5; i++) {
+        if (id.includes(`E${i}`)) return i;
+      }
+      return null;
+    }
+
+    function escapeHtml(text = "") {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function normalizeNodeCode(rawId = "") {
+      const patterns = [
+        /(?:^|[-_])(E[1-5][A-Z0-9]+)(?:[-_]|$)/,
+        /(?:^|[-_])(IPS?\d+)(?:[-_]|$)/,
+        /(?:^|[-_])(MP\d+)(?:[-_]|$)/,
+        /(?:^|[-_])(INICIO|FIM)(?:[-_]|$)/
+      ];
+
+      for (const pattern of patterns) {
+        const match = rawId.match(pattern);
+        if (match) return match[1];
+      }
+      return rawId || "PASSO";
+    }
+
+    function stepCategory(el) {
+      const classes = el?.classList || [];
+      if (classes.contains("secretaria")) return "Ato de Secretaria";
+      if (classes.contains("judicial")) return "Ato judicial";
+      if (classes.contains("recurso")) return "Recurso / 2º grau";
+      if (classes.contains("decisao")) return "Ponto decisório";
+      if (classes.contains("final")) return "Baixa / encerramento";
+      if (classes.contains("policial")) return "Atividade investigativa";
+      return "Passo processual";
+    }
+
+    function cleanNodeLabel(el) {
+      const label = (el?.textContent || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      return label || "Passo do fluxo";
+    }
+
+    function showManualPanel() {
+      document.getElementById('manualPanel').classList.add('open');
+      document.getElementById('backdrop').classList.add('open');
+    }
+
+    function renderManualContent(path, fallback = "") {
+      const raw = (window.MANUAL_CONTENT && window.MANUAL_CONTENT[path]) || fallback;
+      if (!raw) return '<div class="placeholder"><strong>Conteúdo não localizado.</strong></div>';
+      try {
+        if (window.marked) return marked.parse(raw);
+      } catch (e) {}
+      return `<pre style="white-space:pre-wrap; font:inherit">${escapeHtml(raw)}</pre>`;
+    }
+
+    function openManual(stage) {
+      const data = stageManuals[stage];
+      if (!data) return;
+
+      document.getElementById('manualKicker').textContent = "Manual geral da etapa";
+      document.getElementById('manualTitle').textContent = data.title;
+      const stageFile = stageFiles[String(stage)] || "";
+      document.getElementById('manualBody').innerHTML = `
+        <div class="file-link-box">
+          <span class="file-label">Arquivo-fonte editável</span>
+          <code>${escapeHtml(stageFile)}</code>
+          <a class="file-link" href="${fileHref(stageFile)}" target="_blank" rel="noopener">Abrir arquivo da etapa ↗</a>
+        </div>
+        <div class="rendered-manual">${renderManualContent(stageFile, data.summary)}</div>
+      `;
+      showManualPanel();
+    }
+
+    function openStepManual(el, stage) {
+      const code = normalizeNodeCode(el?.id || "");
+      const label = cleanNodeLabel(el);
+      const category = stepCategory(el);
+      const stageData = stageManuals[stage];
+
+      document.getElementById('manualKicker').textContent = "Manual específico do passo";
+      document.getElementById('manualTitle').textContent = label;
+
+      const stepFile = stepFiles[code] || "";
+      document.getElementById('manualBody').innerHTML = `
+        <div class="file-link-box">
+          <span class="file-label">Arquivo-fonte editável</span>
+          <code>${escapeHtml(stepFile || "Arquivo não mapeado")}</code>
+          ${stepFile ? `<a class="file-link" href="${fileHref(stepFile)}" target="_blank" rel="noopener">Abrir arquivo do passo ↗</a>` : ""}
+        </div>
+        <div class="step-meta">
+          <span>${escapeHtml(stageData?.title || `Etapa ${stage}`)}</span>
+          <span>${escapeHtml(code)}</span>
+          <span>${escapeHtml(category)}</span>
+        </div>
+        <div class="rendered-manual">${renderManualContent(stepFile, `# ${code} — ${label}\n\nConteúdo específico ainda não cadastrado.`)}</div>
+      `;
+      showManualPanel();
+    }
+
+    function closeManual() {
+      document.getElementById('manualPanel').classList.remove('open');
+      document.getElementById('backdrop').classList.remove('open');
+    }
+
+    function updateZoomLabel() {
+      if (!panZoom) return;
+      document.getElementById('zoomPct').textContent =
+        `${Math.round(panZoom.getZoom() * 100)}%`;
+    }
+
+    function scheduleMinimapUpdate() {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        updateMinimapViewport();
+        updateZoomLabel();
+      });
+    }
+
+    function buildMinimap() {
+      const host = document.getElementById('miniHost');
+      host.innerHTML = '';
+
+      miniSvg = mainSvg.cloneNode(true);
+      miniSvg.removeAttribute('id');
+      miniSvg.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+      miniSvg.style.pointerEvents = 'none';
+      miniSvg.style.background = '#fff';
+
+      const viewBox = mainSvg.getAttribute('viewBox');
+      if (viewBox) miniSvg.setAttribute('viewBox', viewBox);
+      miniSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+      const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      overlay.setAttribute('id', 'miniViewportRect');
+      miniSvg.appendChild(overlay);
+      miniRect = overlay;
+
+      host.appendChild(miniSvg);
+      updateMinimapViewport();
+    }
+
+    function updateMinimapViewport() {
+      if (!mainSvg || !miniRect) return;
+
+      const viewportGroup = mainSvg.querySelector('.svg-pan-zoom_viewport') ||
+                            mainSvg.querySelector('g.output') ||
+                            mainSvg.querySelector('g');
+
+      if (!viewportGroup || !viewportGroup.getScreenCTM()) return;
+
+      const container = document.getElementById('diagramViewport');
+      const r = container.getBoundingClientRect();
+      const inv = viewportGroup.getScreenCTM().inverse();
+
+      const p1 = mainSvg.createSVGPoint();
+      p1.x = r.left; p1.y = r.top;
+      const a = p1.matrixTransform(inv);
+
+      const p2 = mainSvg.createSVGPoint();
+      p2.x = r.right; p2.y = r.bottom;
+      const b = p2.matrixTransform(inv);
+
+      const x = Math.min(a.x, b.x);
+      const y = Math.min(a.y, b.y);
+      const w = Math.abs(b.x - a.x);
+      const h = Math.abs(b.y - a.y);
+
+      miniRect.setAttribute('x', x);
+      miniRect.setAttribute('y', y);
+      miniRect.setAttribute('width', w);
+      miniRect.setAttribute('height', h);
+    }
+
+    function attachStepClicks() {
+      mainSvg.querySelectorAll('g.node').forEach(el => {
+        const stage = stageFromId(el.id || '');
+        if (stage === null) return;
+
+        el.dataset.stage = stage;
+        el.setAttribute("tabindex", "0");
+        el.setAttribute("role", "button");
+        el.setAttribute("aria-label", `Abrir manual do passo: ${cleanNodeLabel(el)}`);
+
+        el.addEventListener('click', (ev) => {
+          if (ev.defaultPrevented) return;
+          ev.stopPropagation();
+          openStepManual(el, stage);
+        });
+
+        el.addEventListener('keydown', (ev) => {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            openStepManual(el, stage);
+          }
+        });
+      });
+    }
+
+    async function renderDiagram() {
+      try {
+        const { svg } = await mermaid.render('jury-flow-svg', mermaidDefinition);
+        document.getElementById('diagram').innerHTML = svg;
+        mainSvg = document.querySelector('#diagram svg');
+
+        mainSvg.removeAttribute('height');
+        mainSvg.removeAttribute('width');
+        mainSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+        panZoom = svgPanZoom(mainSvg, {
+          zoomEnabled: true,
+          panEnabled: true,
+          controlIconsEnabled: false,
+          fit: true,
+          center: true,
+          minZoom: 0.05,
+          maxZoom: 30,
+          zoomScaleSensitivity: 0.23,
+          dblClickZoomEnabled: true,
+          mouseWheelZoomEnabled: true,
+          preventMouseEventsDefault: true,
+          onZoom: scheduleMinimapUpdate,
+          onPan: scheduleMinimapUpdate
+        });
+
+        attachStepClicks();
+
+        // Pequeno atraso para garantir que o SVG esteja com dimensões definitivas.
+        setTimeout(() => {
+          panZoom.resize();
+          panZoom.fit();
+          panZoom.center();
+          buildMinimap();
+          updateZoomLabel();
+        }, 80);
+
+        const resizeObserver = new ResizeObserver(() => {
+          if (!panZoom) return;
+          panZoom.resize();
+          scheduleMinimapUpdate();
+        });
+        resizeObserver.observe(document.getElementById('diagramViewport'));
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('diagram').innerHTML =
+          `<div class="loading">Não foi possível renderizar o diagrama.<br>Verifique a conexão com a internet para carregar as bibliotecas externas.</div>`;
+      }
+    }
+
+    document.getElementById('zoomIn').addEventListener('click', () => {
+      if (!panZoom) return;
+      panZoom.zoomBy(1.4);
+      scheduleMinimapUpdate();
+    });
+
+    document.getElementById('zoomOut').addEventListener('click', () => {
+      if (!panZoom) return;
+      panZoom.zoomBy(1 / 1.4);
+      scheduleMinimapUpdate();
+    });
+
+    document.getElementById('fit').addEventListener('click', () => {
+      if (!panZoom) return;
+      panZoom.resize();
+      panZoom.fit();
+      panZoom.center();
+      scheduleMinimapUpdate();
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+      if (!panZoom) return;
+      panZoom.reset();
+      panZoom.fit();
+      panZoom.center();
+      scheduleMinimapUpdate();
+    });
+
+    document.querySelectorAll('[data-open-stage]').forEach(btn => {
+      btn.addEventListener('click', () => openManual(Number(btn.dataset.openStage)));
+    });
+
+    document.getElementById('closeManual').addEventListener('click', closeManual);
+    document.getElementById('backdrop').addEventListener('click', closeManual);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeManual();
+    });
+
+    renderDiagram();
+  </script>
+</body>
+</html>
